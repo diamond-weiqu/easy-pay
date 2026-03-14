@@ -5,7 +5,7 @@
 
 [![Php](https://img.shields.io/badge/php->=8.0.0-brightgreen.svg)](https://golang.google.cn)
 [![Go](https://github.com/go-pay/gopay/actions/workflows/go.yml/badge.svg)](https://github.com/go-pay/gopay/actions/workflows/go.yml)
-[![GitHub Release](https://img.shields.io/github/v/release/diamond-weiqu/easy-pay)](https://github.com/go-pay/gopay/releases)
+[![GitHub Release](https://img.shields.io/github/v/release/diamond-weiqu/easy-pay)](https://github.com/diamond-weiqu/easy-pay/releases)
 [![License](https://img.shields.io/github/license/diamond-weiqu/easy-pay)](https://www.apache.org/licenses/LICENSE-2.0)
 [![Go Report Card](https://goreportcard.com/badge/github.com/go-pay/gopay)](https://goreportcard.com/report/github.com/diamond-weiqu/easy-pay)
 
