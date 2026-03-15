@@ -1,17 +1,8 @@
 # easy-pay
 
-[![Github](https://img.shields.io/github/followers/iGoogle-ink?label=Follow&style=social)](https://github.com/iGoogle-ink)
-[![Github](https://img.shields.io/github/forks/diamond-weiqu/easy-pay?label=Fork&style=social)](https://github.com/diamond-weiqu/easy-pay/fork)
-
-[![Php](https://img.shields.io/badge/php->=8.0.0-brightgreen.svg)](https://golang.google.cn)
-[![Go](https://github.com/go-pay/gopay/actions/workflows/go.yml/badge.svg)](https://github.com/go-pay/gopay/actions/workflows/go.yml)
-[![GitHub Release](https://img.shields.io/github/v/release/diamond-weiqu/easy-pay)](https://github.com/diamond-weiqu/easy-pay/releases)
-[![License](https://img.shields.io/github/license/diamond-weiqu/easy-pay)](https://www.apache.org/licenses/LICENSE-2.0)
-[![Go Report Card](https://goreportcard.com/badge/github.com/go-pay/gopay)](https://goreportcard.com/report/github.com/diamond-weiqu/easy-pay)
-
 `easy-pay` 是一个面向 PHP 生态的轻量支付 SDK，提供统一接口来接入官方支付和第三方聚合支付渠道。
 
-当前版本已内置支付宝、微信支付、乐刷聚合支付、拉卡拉支付的基础接入能力，适合作为业务系统或开源项目的支付基础层。
+当前版本已内置支付宝、微信支付、乐刷聚合支付、拉卡拉支付、斗拱汇付支付的基础接入能力，适合作为业务系统或开源项目的支付基础层。
 
 ## 安装
 
@@ -25,6 +16,9 @@ composer require moxianbao/easy-pay
 - 微信支付 `wechatpay`
 - 乐刷聚合支付 `leshua`
 - 拉卡拉支付 `lakala`
+- 斗拱汇付支付 `huifu`
+
+斗拱汇付同时支持别名：`dougong`、`dougong_huifu`。
 
 ## 快速开始
 
@@ -49,10 +43,12 @@ $client = new CallableHttpClient(
     }
 );
 
-$gateway = PaymentManager::make('alipay', [
-    'app_id' => '2026000000000000',
-    'private_key' => '/path/to/alipay-private.pem',
-    'public_key' => '/path/to/alipay-public.pem',
+$gateway = PaymentManager::make('huifu', [
+    'sys_id' => '6666000108854952',
+    'product_id' => 'test-product',
+    'merchant_private_key' => __DIR__ . '/cert/huifu-private.pem',
+    'huifu_public_key' => __DIR__ . '/cert/huifu-public.pem',
+    'huifu_id' => '6666000108854952',
 ], $client);
 ```
 
@@ -64,12 +60,16 @@ $gateway = PaymentManager::make('alipay', [
 use EasyPay\Payment\Request\PayOrder;
 
 $response = $gateway->create(new PayOrder(
-    outTradeNo: 'T202603140001',
+    outTradeNo: '202603150001',
     amount: '99.00',
     subject: 'VIP Subscription',
-    notifyUrl: 'https://demo.test/notify/alipay',
-    returnUrl: 'https://demo.test/return/alipay',
-    scene: 'web'
+    notifyUrl: 'https://demo.test/notify/huifu',
+    returnUrl: 'https://demo.test/return/huifu',
+    scene: 'native',
+    clientIp: '127.0.0.1',
+    metadata: [
+        'channel' => 'alipay',
+    ]
 ));
 
 print_r($response->toArray());
@@ -82,7 +82,7 @@ print_r($response->toArray());
 
 $notify = $gateway->parseNotify($rawBody, getallheaders());
 
-if (in_array($notify->status, ['TRADE_SUCCESS', 'SUCCESS', '2'], true)) {
+if (in_array($notify->status, ['TRADE_SUCCESS', 'SUCCESS', 'S', '2'], true)) {
     // 这里更新你的业务订单状态
 }
 ```
@@ -98,17 +98,25 @@ if (in_array($notify->status, ['TRADE_SUCCESS', 'SUCCESS', '2'], true)) {
 
 ```php
 [
-    'private_key' => file_get_contents(__DIR__ . '/cert/private.pem'),
-    'public_key' => file_get_contents(__DIR__ . '/cert/public.pem'),
+    'merchant_private_key' => file_get_contents(__DIR__ . '/cert/private.pem'),
+    'huifu_public_key' => file_get_contents(__DIR__ . '/cert/public.pem'),
 ]
 ```
 
 ```php
 [
-    'private_key' => __DIR__ . '/cert/private.pem',
-    'public_key' => __DIR__ . '/cert/public.pem',
+    'merchant_private_key' => __DIR__ . '/cert/private.pem',
+    'huifu_public_key' => __DIR__ . '/cert/public.pem',
 ]
 ```
+
+各渠道常用密钥字段如下：
+
+- 支付宝：`private_key`、`public_key`，证书模式还支持 `app_cert`、`alipay_public_cert`、`alipay_root_cert`
+- 微信支付：`private_key`、`platform_public_key` 或 `platform_public_keys`、`api_v3_key`
+- 乐刷：`trade_key`、`notify_key`
+- 拉卡拉：`merchant_cert`、`merchant_private_key`、`platform_cert`
+- 斗拱汇付：`merchant_private_key`、`huifu_public_key`
 
 ## 配置说明
 
@@ -139,14 +147,6 @@ if (in_array($notify->status, ['TRADE_SUCCESS', 'SUCCESS', '2'], true)) {
     'gateway_uri' => 'https://openapi.alipay.com/gateway.do',
 ]
 ```
-
-支付宝证书模式说明：
-
-- `private_key`：应用私钥内容或路径，用于请求签名
-- `app_cert`：应用公钥证书内容或路径，用于自动计算 `app_cert_sn`
-- `alipay_public_cert`：支付宝公钥证书内容或路径，用于异步通知验签
-- `alipay_root_cert`：支付宝根证书内容或路径，用于自动计算 `alipay_root_cert_sn`
-- 如果你已经自行算好了证书序列号，也可以直接传 `app_cert_sn` 和 `alipay_root_cert_sn`
 
 ### 微信支付 `wechatpay`
 
@@ -190,27 +190,6 @@ if (in_array($notify->status, ['TRADE_SUCCESS', 'SUCCESS', '2'], true)) {
 - `sub_appid`: 微信公众号或小程序 `appid`，仅 JSAPI / 小程序场景需要
 - `scene`: 推荐使用 `native`、`jsapi`、`mini`
 
-乐刷示例：
-
-```php
-$gateway = PaymentManager::make('leshua', [
-    'merchant_id' => '10000001',
-    'trade_key' => 'trade-key',
-    'notify_key' => 'notify-key',
-], $client);
-
-$response = $gateway->create(new PayOrder(
-    outTradeNo: 'LS202603140001',
-    amount: '88.00',
-    subject: 'Leshua Order',
-    notifyUrl: 'https://demo.test/notify/leshua',
-    scene: 'native',
-    metadata: [
-        'channel' => 'alipay',
-    ]
-));
-```
-
 如果你发起乐刷退款，需要在 `RefundOrder::metadata` 中补充上游交易号：
 
 ```php
@@ -234,13 +213,6 @@ $response = $gateway->create(new PayOrder(
 ]
 ```
 
-拉卡拉证书传参说明：
-
-- `merchant_cert`：商户证书内容或路径，用于读取证书序列号
-- `merchant_private_key`：商户私钥内容或路径，用于请求签名
-- `platform_cert`：拉卡拉平台证书内容或路径，用于回调验签
-- `merchant_serial_no`：可选；如果你不想从商户证书里自动读取序列号，可以直接传入
-
 拉卡拉下单时需要在 `PayOrder::metadata` 中指定支付渠道：
 
 - `channel`: `alipay` / `wxpay` / `bank`
@@ -248,23 +220,91 @@ $response = $gateway->create(new PayOrder(
 - `sub_appid`: 微信公众号或小程序 `appid`
 - `extend`: 可选，会映射到 `acc_busi_fields`
 
-拉卡拉示例：
+如果你发起拉卡拉退款，推荐在 `RefundOrder::metadata` 中补充原交易号：
 
 ```php
-$gateway = PaymentManager::make('lakala', [
-    'app_id' => 'lakala-appid',
-    'merchant_no' => 'merchant-no',
-    'term_no' => 'term-no',
-    'merchant_cert' => __DIR__ . '/cert/api_cert.cer',
-    'merchant_private_key' => __DIR__ . '/cert/api_private_key.pem',
-    'platform_cert' => __DIR__ . '/cert/lkl-apigw-v1.cer',
+[
+    'trade_no' => '拉卡拉返回的 trade_no',
+]
+```
+
+### 斗拱汇付支付 `huifu`
+
+```php
+[
+    'sys_id' => '汇付系统号',
+    'product_id' => '汇付产品号',
+    'merchant_private_key' => '/path/to/huifu-private.pem',
+    'huifu_public_key' => '/path/to/huifu-public.pem',
+    'huifu_id' => '汇付子商户号，可选；不填默认使用 sys_id',
+    'project_id' => '托管 H5/PC 项目号，可选',
+    'seq_id' => '托管小程序应用 ID，可选',
+    'notify_url' => 'https://demo.test/notify/huifu',
+    'return_url' => 'https://demo.test/return/huifu',
+    'gateway_uri' => 'https://api.huifu.com',
+]
+```
+
+斗拱汇付密钥字段说明：
+
+- `sys_id`：汇付系统号
+- `product_id`：汇付产品号
+- `merchant_private_key`：商户私钥内容或路径，用于请求签名
+- `huifu_public_key`：汇付公钥内容或路径，用于验签响应和异步通知
+- `huifu_id`：可选；如果不传，会默认回退到 `sys_id`
+- `project_id`：托管 H5/PC 下单时使用
+- `seq_id`：托管微信小程序下单时使用
+
+斗拱汇付下单支持两种模式：
+
+- `direct`：默认模式，走 `/v3/trade/payment/jspay`
+- `hosting`：托管模式，走 `/v2/trade/hosting/payment/preorder`
+
+`PayOrder::metadata` 常用字段：
+
+- `mode`: `direct` / `hosting`，默认 `direct`
+- `channel`: `alipay` / `wxpay` / `bank` / `ecny`
+- `sub_appid`: 微信 JSAPI / 小程序场景需要
+- `buyer_id`: 支付宝 JSAPI 场景可传买家 `buyer_id`
+- `product_id`: 微信 Native 场景可传商品标识，默认 `01001`
+- `acct_split_bunch`: 可选，分账信息，支持数组或 JSON 字符串
+
+斗拱汇付 `direct` 模式的场景映射：
+
+- 支付宝：`native`、`jsapi`
+- 微信支付：`native`、`jsapi`、`mini`
+- 银联：`native`、`jsapi`
+- 数字人民币：`native`
+
+斗拱汇付 `hosting` 模式的常用字段：
+
+- H5 / PC：需要 `project_id`，可选 `project_title`、`request_type`
+- 支付宝 App：可传 `app_schema`
+- 微信小程序 / App：可传 `need_scheme`、`seq_id`
+
+斗拱汇付查询与退款注意事项：
+
+- `query()` 优先使用 `tradeNo` 作为 `org_hf_seq_id`
+- 如果没有 `tradeNo`，则 `outTradeNo` 最好以 `YYYYMMDD` 开头，库会自动推导 `org_req_date`
+- `close()` 依赖 `outTradeNo` 推导 `org_req_date`，因此同样建议订单号带日期前缀
+- `refund()` 推荐在 `RefundOrder::metadata` 里传 `org_hf_seq_id` 或 `trade_no`
+- `refundQuery()` 当前依赖 `refundNo` 带 `YYYYMMDD` 前缀，或使用带日期的退款请求号
+
+斗拱汇付直连下单示例：
+
+```php
+$gateway = PaymentManager::make('huifu', [
+    'sys_id' => '6666000108854952',
+    'product_id' => 'test-product',
+    'merchant_private_key' => __DIR__ . '/cert/huifu-private.pem',
+    'huifu_public_key' => __DIR__ . '/cert/huifu-public.pem',
 ], $client);
 
 $response = $gateway->create(new PayOrder(
-    outTradeNo: 'LKL202603140001',
-    amount: '128.00',
-    subject: 'Lakala Order',
-    notifyUrl: 'https://demo.test/notify/lakala',
+    outTradeNo: '202603150001',
+    amount: '88.00',
+    subject: 'Huifu Order',
+    notifyUrl: 'https://demo.test/notify/huifu',
     scene: 'native',
     clientIp: '127.0.0.1',
     metadata: [
@@ -273,12 +313,39 @@ $response = $gateway->create(new PayOrder(
 ));
 ```
 
-如果你发起拉卡拉退款，推荐在 `RefundOrder::metadata` 中补充原交易号：
+斗拱汇付托管下单示例：
 
 ```php
-[
-    'trade_no' => '拉卡拉返回的 trade_no',
-]
+$response = $gateway->create(new PayOrder(
+    outTradeNo: '202603150002',
+    amount: '68.00',
+    subject: 'Huifu Hosting Order',
+    notifyUrl: 'https://demo.test/notify/huifu',
+    returnUrl: 'https://demo.test/return/huifu',
+    scene: 'h5',
+    metadata: [
+        'mode' => 'hosting',
+        'channel' => 'wxpay',
+        'project_id' => 'P0000001',
+        'request_type' => 'M',
+    ]
+));
+```
+
+斗拱汇付退款示例：
+
+```php
+use EasyPay\Payment\Request\RefundOrder;
+
+$refund = $gateway->refund(new RefundOrder(
+    outTradeNo: '202603150001',
+    refundNo: '202603150101',
+    amount: '10.00',
+    reason: 'partial refund',
+    metadata: [
+        'org_hf_seq_id' => '汇付返回的hf_seq_id',
+    ]
+));
 ```
 
 ## HTTP 客户端
@@ -311,13 +378,9 @@ public function request(
 
 ## 示例
 
-查看 [examples/mock-client.php](examples/mock-client.php)
+查看 [examples/mock-client.php](examples/mock-client.php) 和 [examples/huifu.php](examples/huifu.php)
 
 ## License
 
 MIT
-
-
-
-
 

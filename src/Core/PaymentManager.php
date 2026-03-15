@@ -8,6 +8,7 @@ use EasyPay\Payment\Contracts\GatewayInterface;
 use EasyPay\Payment\Contracts\HttpClientInterface;
 use EasyPay\Payment\Exception\UnsupportedProviderException;
 use EasyPay\Payment\Providers\Alipay\AlipayGateway;
+use EasyPay\Payment\Providers\Huifu\HuifuGateway;
 use EasyPay\Payment\Providers\Lakala\LakalaGateway;
 use EasyPay\Payment\Providers\Leshua\LeshuaGateway;
 use EasyPay\Payment\Providers\WechatPay\WechatPayGateway;
@@ -24,6 +25,7 @@ final class PaymentManager
             'wechatpay', 'wechat_pay', 'wechat' => new WechatPayGateway($config, $httpClient),
             'leshua' => new LeshuaGateway($config, $httpClient),
             'lakala' => new LakalaGateway($config, $httpClient),
+            'huifu', 'dougong', 'dougong_huifu' => new HuifuGateway($config, $httpClient),
             default => throw new UnsupportedProviderException(sprintf(
                 'Unsupported provider "%s".',
                 $provider

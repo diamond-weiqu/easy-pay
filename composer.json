@@ -1,6 +1,6 @@
 {
     "name": "moxianbao/easy-pay",
-    "description": "Framework-agnostic PHP payment SDK for Alipay, Wechat Pay, Leshua, and Lakala with unified gateway APIs.",
+    "description": "Framework-agnostic PHP payment SDK for Alipay, Wechat Pay, Leshua, Lakala, and Huifu DouGong with unified gateway APIs.",
     "type": "library",
     "license": "MIT",
     "keywords": [
@@ -12,6 +12,8 @@
         "wechatpay",
         "leshua",
         "lakala",
+        "huifu",
+        "dougong",
         "php-sdk",
         "sdk",
         "easy-pay"
